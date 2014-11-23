@@ -1,0 +1,53 @@
+apply plugin: 'idea'
+apply plugin: 'groovy'
+
+if (!JavaVersion.current().java8Compatible) {
+    throw new IllegalStateException("Must be built with Java 8 or higher")
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.igniterealtime.smack:smack:3.1.0"
+
+    testCompile "org.spockframework:spock-core:0.7-groovy-2.0", {
+        exclude module: "groovy-all"
+    }
+    testCompile "org.codehaus.groovy:groovy-all:2.3.6"
+    testCompile "com.googlecode.windowlicker:windowlicker-swing:r268"
+    testCompile "org.apache.vysper:vysper:0.7"
+}
+
+configurations.all {
+    resolutionStrategy {
+        failOnVersionConflict()
+        eachDependency {
+            // Spock brings in both 1.1 and 1.3 of this guy, and WindowLicker brings 1.1-all, so force 1.3 to 1.1.
+            // Excludes aren't ideal because it's spock bringing in both of these
+            if (requested.name == "hamcrest-core" && requested.version == "1.3") {
+                useVersion "1.1"
+            }
+            if (requested.name == "slf4j-api" && requested.version == "1.5.3") {
+                useVersion "1.5.11"
+            }
+            if (requested.name == "jackrabbit-jcr-commons" && requested.version == "1.5.0") {
+                useVersion "1.5.3"
+            }
+
+            if (requested.name == "log4j" && requested.version in ["1.2.12", "1.2.13"]) {
+                useVersion "1.2.14"
+            }
+        }
+    }
+}
+
+idea {
+    project {
+        jdkName = "1.8"
+        languageLevel = "1.8"
+
+        vcs = "Git"
+    }
+}
