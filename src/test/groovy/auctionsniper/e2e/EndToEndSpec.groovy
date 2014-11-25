@@ -26,7 +26,29 @@ class EndToEndSpec extends Specification {
         application.startBiddingIn(auction)
 
         then:
-        auction.hasReceivedJoinRequestFromSniper()
+        auction.hasReceivedJoinRequestFromSniper(SNIPER_ID)
+
+        when:
+        auction.announceClosed()
+
+        then:
+        application.showsSniperHasLostAuction()
+    }
+
+    void "sniper makes a higher bid but looses"() {
+        when:
+        auction.startSellingItem()
+        application.startBiddingIn(auction)
+
+        then:
+        auction.hasReceivedJoinRequestFromSniper(SNIPER_ID)
+
+        when:
+        auction.reportPrice(1000, 98, "other bidder")
+
+        then:
+        application.hasShownSniperIsBidding()
+        auction.hasReceivedBid(1098, SNIPER_ID)
 
         when:
         auction.announceClosed()

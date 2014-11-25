@@ -1,13 +1,18 @@
 package auctionsniper.fixtures
 
 import auctionsniper.Main
+import org.hamcrest.Matcher
+import org.hamcrest.Matchers
 import org.jivesoftware.smack.Chat
 import org.jivesoftware.smack.MessageListener
 import org.jivesoftware.smack.XMPPConnection
 import org.jivesoftware.smack.packet.Message
+import org.junit.Assert
 
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
+
+import static org.hamcrest.CoreMatchers.*
 
 class FakeAuctionServer {
 
@@ -33,28 +38,21 @@ class FakeAuctionServer {
         username
     }
 
-    void hasReceivedJoinRequestFromSniper() {
-        messageListener.receivesMessage()
+    void hasReceivedJoinRequestFromSniper(String sniperId) {
+        messageListener.receivesMessageMatching(sniperId, equalTo(Main.JOIN_COMMAND_FORMAT))
     }
 
     void announceClosed() {
-        auctionChat.sendMessage(new Message())
+        auctionChat.sendMessage("SOLVersion: 1.1; Event: CLOSE;")
     }
 
-    void close() {
-        connection.disconnect()
+    void reportPrice(int currentPrice, int priceIncrement, Object lastBidFrom) {
+        auctionChat.sendMessage("SOLVersion: 1.1; Event: PRICE; CurrentPrice: $currentPrice; Increment: $priceIncrement; Bidder: $lastBidFrom;")
     }
 
-    private static class SingleMessageListener implements MessageListener {
-        private final ArrayBlockingQueue<Message> messages = new ArrayBlockingQueue<>(1)
-
-        void processMessage(Chat chat, Message message) {
-            messages.add(message)
-        }
-
-        void receivesMessage() {
-            assert messages.poll(5, TimeUnit.SECONDS) != null
-        }
+    void hasReceivedBid(int bid, String sniperId) {
+        def message = String.format(Main.BID_COMMAND_FORMAT, bid)
+        messageListener.receivesMessageMatching(sniperId, equalTo(message))
     }
 
     void startSellingItem() {
@@ -66,5 +64,24 @@ class FakeAuctionServer {
                 chat.addMessageListener(messageListener)
             }
         }
+    }
+
+    private class SingleMessageListener implements MessageListener {
+        private final ArrayBlockingQueue<Message> messages = new ArrayBlockingQueue<>(1)
+
+        void processMessage(Chat chat, Message message) {
+            messages.add(message)
+        }
+
+        void receivesMessageMatching(String sniperId, Matcher<? super String> messageMatcher) {
+            def message = messages.poll(5, TimeUnit.SECONDS)
+            Assert.assertThat("Message", message, Matchers.is(notNullValue()))
+            Assert.assertThat(message.body, messageMatcher)
+            Assert.assertThat(auctionChat.participant, Matchers.startsWith("$sniperId@"))
+        }
+    }
+
+    void close() {
+        connection.disconnect()
     }
 }

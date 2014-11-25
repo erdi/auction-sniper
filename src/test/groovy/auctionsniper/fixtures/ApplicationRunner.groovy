@@ -25,6 +25,10 @@ class ApplicationRunner {
         driver.showsSniperStatus(MainWindow.STATUS_LOST)
     }
 
+    void hasShownSniperIsBidding() {
+        driver.showsSniperStatus(MainWindow.STATUS_BIDDING)
+    }
+
     void close() {
         driver?.dispose()
     }
