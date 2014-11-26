@@ -9,7 +9,7 @@ import org.jivesoftware.smack.XMPPException;
 
 import javax.swing.*;
 
-public class Main implements SniperListener {
+public class Main {
 
     private static final int ARG_HOSTNAME = 0;
     private static final int ARG_USERNAME = 1;
@@ -20,11 +20,9 @@ public class Main implements SniperListener {
     public static final String BID_COMMAND_FORMAT = "SOLVersion: 1.1; Event: BID; price: %s;";
 
     public static final String AUCTION_RESOURCE = "Auction";
-    private final ConnectionFinalizingListener connectionFinalizer;
+
     private final AuctionMessageTranslator translator;
     private final Auction auction;
-
-    private MainWindow ui;
     private final Chat chat;
 
     static void main(String[] args) throws Exception {
@@ -33,33 +31,19 @@ public class Main implements SniperListener {
     }
 
     @Inject
-    public Main(Chat chat, Auction auction, AuctionMessageTranslator translator, ConnectionFinalizingListener connectionFinalizer) throws Exception {
+    public Main(MainWindow ui, Chat chat, Auction auction, AuctionMessageTranslator translator, ConnectionFinalizingListener connectionFinalizer) throws Exception {
         this.chat = chat;
         this.auction = auction;
-        this.connectionFinalizer = connectionFinalizer;
         this.translator = translator;
-        startUserInterface();
+
+        ui.addWindowListener(connectionFinalizer);
+
         joinAuction();
     }
 
-    private void startUserInterface() throws Exception{
-        SwingUtilities.invokeAndWait(() -> ui = new MainWindow());
-        ui.addWindowListener(connectionFinalizer);
-    }
 
     public void joinAuction() throws XMPPException {
         chat.addMessageListener(translator);
         auction.join();
     }
-
-    @Override
-    public void sniperLost() {
-        SwingUtilities.invokeLater(() -> ui.showStatus(MainWindow.STATUS_LOST));
-    }
-
-    @Override
-    public void sniperBidding() {
-        SwingUtilities.invokeLater(() -> ui.showStatus(MainWindow.STATUS_BIDDING));
-    }
-
 }
