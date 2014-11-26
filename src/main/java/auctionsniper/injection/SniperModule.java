@@ -27,6 +27,7 @@ public class SniperModule extends AbstractModule {
     protected void configure() {
         bind(SniperListener.class).to(Main.class);
         bind(AuctionEventListener.class).to(Sniper.class);
+        bind(Auction.class).to(XmppAuction.class);
     }
 
     @Provides
@@ -46,14 +47,4 @@ public class SniperModule extends AbstractModule {
         return connection.getChatManager().createChat(auctionId, null);
     }
 
-    @Provides
-    public Auction createAuction(Chat chat) {
-        return bid -> {
-            try {
-                chat.sendMessage(String.format(Main.BID_COMMAND_FORMAT, bid));
-            } catch (XMPPException e) {
-                e.printStackTrace();
-            }
-        };
-    }
 }

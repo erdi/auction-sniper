@@ -22,6 +22,7 @@ public class Main implements SniperListener {
     public static final String AUCTION_RESOURCE = "Auction";
     private final ConnectionFinalizingListener connectionFinalizer;
     private final AuctionMessageTranslator translator;
+    private final Auction auction;
 
     private MainWindow ui;
     private final Chat chat;
@@ -32,8 +33,9 @@ public class Main implements SniperListener {
     }
 
     @Inject
-    public Main(Chat chat, AuctionMessageTranslator translator, ConnectionFinalizingListener connectionFinalizer) throws Exception {
+    public Main(Chat chat, Auction auction, AuctionMessageTranslator translator, ConnectionFinalizingListener connectionFinalizer) throws Exception {
         this.chat = chat;
+        this.auction = auction;
         this.connectionFinalizer = connectionFinalizer;
         this.translator = translator;
         startUserInterface();
@@ -47,7 +49,7 @@ public class Main implements SniperListener {
 
     public void joinAuction() throws XMPPException {
         chat.addMessageListener(translator);
-        chat.sendMessage(JOIN_COMMAND_FORMAT);
+        auction.join();
     }
 
     @Override
