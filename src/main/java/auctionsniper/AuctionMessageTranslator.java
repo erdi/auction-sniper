@@ -1,5 +1,6 @@
 package auctionsniper;
 
+import com.google.inject.Inject;
 import org.jivesoftware.smack.Chat;
 import org.jivesoftware.smack.MessageListener;
 import org.jivesoftware.smack.packet.Message;
@@ -11,9 +12,10 @@ import java.util.stream.Collectors;
 
 import static java.util.Map.Entry;
 
-class AuctionMessageTranslator implements MessageListener {
+public class AuctionMessageTranslator implements MessageListener {
     private final AuctionEventListener listener;
 
+    @Inject
     AuctionMessageTranslator(AuctionEventListener listener) {
         this.listener = listener;
     }

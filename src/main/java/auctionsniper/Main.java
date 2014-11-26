@@ -1,13 +1,13 @@
 package auctionsniper;
 
 import auctionsniper.gui.MainWindow;
+import auctionsniper.injection.SniperModule;
+import com.google.inject.Guice;
+import com.google.inject.Inject;
 import org.jivesoftware.smack.Chat;
-import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.XMPPException;
 
 import javax.swing.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 
 public class Main implements SniperListener {
 
@@ -20,60 +20,34 @@ public class Main implements SniperListener {
     public static final String BID_COMMAND_FORMAT = "SOLVersion: 1.1; Event: BID; price: %s;";
 
     public static final String AUCTION_RESOURCE = "Auction";
+    private final ConnectionFinalizingListener connectionFinalizer;
+    private final AuctionMessageTranslator translator;
 
     private MainWindow ui;
-    private Chat chat;
+    private final Chat chat;
 
-    public Main() throws Exception {
+    static void main(String[] args) throws Exception {
+        SniperModule module = new SniperModule(args[ARG_HOSTNAME], args[ARG_USERNAME], args[ARG_PASSWORD], args[ARG_ITEM_ID], AUCTION_RESOURCE);
+        Guice.createInjector(module).getInstance(Main.class);
+    }
+
+    @Inject
+    public Main(Chat chat, AuctionMessageTranslator translator, ConnectionFinalizingListener connectionFinalizer) throws Exception {
+        this.chat = chat;
+        this.connectionFinalizer = connectionFinalizer;
+        this.translator = translator;
         startUserInterface();
+        joinAuction();
     }
 
     private void startUserInterface() throws Exception{
         SwingUtilities.invokeAndWait(() -> ui = new MainWindow());
+        ui.addWindowListener(connectionFinalizer);
     }
 
-    static void main(String[] args) throws Exception {
-        Main main = new Main();
-        XMPPConnection connection = connection(args[ARG_HOSTNAME], args[ARG_USERNAME], args[ARG_PASSWORD]);
-        main.joinAuction(connection, args[ARG_ITEM_ID]);
-    }
-
-    private static XMPPConnection connection(String hostname, String username, String password) throws XMPPException {
-        XMPPConnection connection = new XMPPConnection(hostname);
-        connection.connect();
-        connection.login(username, password, AUCTION_RESOURCE);
-
-        return connection;
-    }
-
-    private static String auctionId(String itemId, XMPPConnection connection) {
-        return String.format("%s@%s/", itemId, connection.getServiceName());
-    }
-
-    public void joinAuction(XMPPConnection connection, String itemId) throws XMPPException {
-        disconnectWhenUiCloses(connection);
-        String auctionId = auctionId(itemId, connection);
-        chat = connection.getChatManager().createChat(auctionId, null);
-        Sniper sniper = new Sniper(this, (int bid) -> {
-            try {
-                chat.sendMessage(String.format(BID_COMMAND_FORMAT, bid));
-            } catch (XMPPException e) {
-                e.printStackTrace();
-            }
-            return;
-        });
-        AuctionMessageTranslator translator = new AuctionMessageTranslator(sniper);
+    public void joinAuction() throws XMPPException {
         chat.addMessageListener(translator);
         chat.sendMessage(JOIN_COMMAND_FORMAT);
-    }
-
-    private void disconnectWhenUiCloses(XMPPConnection connection) {
-        ui.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosed(WindowEvent e) {
-                connection.disconnect();
-            }
-        });
     }
 
     @Override
@@ -85,4 +59,5 @@ public class Main implements SniperListener {
     public void sniperBidding() {
         SwingUtilities.invokeLater(() -> ui.showStatus(MainWindow.STATUS_BIDDING));
     }
+
 }
